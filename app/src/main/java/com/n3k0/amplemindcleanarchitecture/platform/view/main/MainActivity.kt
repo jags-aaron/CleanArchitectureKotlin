@@ -2,27 +2,32 @@ package com.n3k0.amplemindcleanarchitecture.platform.view.main
 
 import android.os.Bundle
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.n3k0.amplemindcleanarchitecture.R
 import com.n3k0.amplemindcleanarchitecture.data.model.Country
 import com.n3k0.amplemindcleanarchitecture.platform.adapter.Adapter
 import com.n3k0.amplemindcleanarchitecture.platform.adapter.TypeFactoryImpl
-import com.n3k0.amplemindcleanarchitecture.platform.common.BaseActivity
 import com.n3k0.amplemindcleanarchitecture.platform.navigation.Navigator
-import com.n3k0.amplemindcleanarchitecture.presentation.MainActivityPresenter
+import com.n3k0.amplemindcleanarchitecture.presentation.MainActivityViewModel
 import com.n3k0.amplemindcleanarchitecture.presentation.boundary.ItemPresenter
 import com.n3k0.amplemindcleanarchitecture.presentation.boundary.MainView
-import com.n3k0.amplemindcleanarchitecture.presentation.common.BasePresenter
+import dagger.android.AndroidInjection
+import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_main.*
+import java.lang.Exception
+import javax.inject.Inject
 
-open class MainActivity : BaseActivity(), MainView {
+open class MainActivity : AppCompatActivity(), MainView {
 
-//    @Inject
-//    lateinit var presenter: MainActivityPresenter
+    @Inject
+    lateinit var viewModelFactory: ViewModelProvider.Factory
 
-    var presenter: MainActivityPresenter? = null
-
+    private val compositeDisposable = CompositeDisposable()
+    private lateinit var viewModel: MainActivityViewModel
     private lateinit var mAdapter: Adapter
     private lateinit var viewManager: RecyclerView.LayoutManager
 
@@ -30,19 +35,39 @@ open class MainActivity : BaseActivity(), MainView {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        presenter = getCompositionRoot()?.getPresenter(this)
+        AndroidInjection.inject(this)
+
+        viewModel = ViewModelProviders.of(this, viewModelFactory)
+            .get(MainActivityViewModel::class.java)
 
         viewManager = LinearLayoutManager(this)
 
         btnGetData.setOnClickListener {
-            presenter?.getMockData()
+            viewModel.getMockData()
         }
     }
+
+    /* --------------------- OBSERVERS --------------------------*/
+
+    override fun onStart() {
+        super.onStart()
+        compositeDisposable.add(viewModel.errorSubject.subscribe(this::showError))
+        compositeDisposable.add(viewModel.successSubject.subscribe(this::showList))
+        compositeDisposable.add(viewModel.itemClickSubject.subscribe(this::itemListClick))
+    }
+
+    override fun onStop() {
+        compositeDisposable.clear()
+        viewModel.onStop()
+        super.onStop()
+    }
+
+    /* --------------------- RX TRIGGERS --------------------------*/
 
     override fun showList(itemCountries: List<ItemPresenter>) {
         mAdapter = Adapter(
             itemCountries,
-            presenter as BasePresenter,
+            viewModel,
             TypeFactoryImpl()
         )
         recyclerView.apply {
@@ -56,12 +81,7 @@ open class MainActivity : BaseActivity(), MainView {
         Navigator.navigateToDetail(this, country)
     }
 
-    override fun showError(error: String) {
-        Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        presenter?.onViewReady()
+    override fun showError(error: Exception) {
+        Toast.makeText(this, error.message, Toast.LENGTH_SHORT).show()
     }
 }

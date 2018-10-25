@@ -22,4 +22,8 @@ class GetCountriesUseCase(
             }
         }
     }
+
+    fun cancel(){
+        cancelJob()
+    }
 }

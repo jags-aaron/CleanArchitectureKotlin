@@ -2,7 +2,7 @@ package com.n3k0.amplemindcleanarchitecture
 
 import com.n3k0.amplemindcleanarchitecture.domain.boundary.UseCaseFactory
 import com.n3k0.amplemindcleanarchitecture.platform.view.main.MainActivity
-import com.n3k0.amplemindcleanarchitecture.presentation.MainActivityPresenter
+import com.n3k0.amplemindcleanarchitecture.presentation.MainActivityViewModel
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,17 +19,17 @@ class MainViewTest {
     @Mock
     private lateinit var useCaseFactory: UseCaseFactory
 
-    private lateinit var presenter: MainActivityPresenter
+    private lateinit var viewModel: MainActivityViewModel
 
     @Before
     fun setup() {
-        presenter = MainActivityPresenter(view, useCaseFactory)
+        viewModel = MainActivityViewModel(view, useCaseFactory)
     }
 
     @Test
     fun onItemListClick() {
         // Given
-        presenter.onItemClicked(mockCountry())
+        viewModel.onItemClicked(mockCountry())
         // Then
         verify(view).itemListClick(mockCountry())
     }

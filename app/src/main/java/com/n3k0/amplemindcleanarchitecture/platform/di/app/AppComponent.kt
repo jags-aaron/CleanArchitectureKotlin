@@ -3,6 +3,9 @@ package com.n3k0.amplemindcleanarchitecture.platform.di.app
 import android.app.Application
 import com.n3k0.amplemindcleanarchitecture.platform.MyApp
 import com.n3k0.amplemindcleanarchitecture.platform.di.ActivityBuilder
+import com.n3k0.amplemindcleanarchitecture.platform.di.ViewModelModule
+import com.n3k0.amplemindcleanarchitecture.platform.di.feature.DetailActivityModule
+import com.n3k0.amplemindcleanarchitecture.platform.di.feature.MainActivityModule
 import dagger.BindsInstance
 import dagger.Component
 import dagger.android.support.AndroidSupportInjectionModule
@@ -13,7 +16,9 @@ import javax.inject.Singleton
     modules = [
         AndroidSupportInjectionModule::class,
         AppModule::class,
-        ActivityBuilder::class
+        ActivityBuilder::class,
+        ViewModelModule::class,
+        MainActivityModule::class
     ]
 )
 interface AppComponent {
@@ -24,6 +29,7 @@ interface AppComponent {
     interface Builder {
         @BindsInstance
         fun application(application: Application): Builder
+
         fun build(): AppComponent
     }
 

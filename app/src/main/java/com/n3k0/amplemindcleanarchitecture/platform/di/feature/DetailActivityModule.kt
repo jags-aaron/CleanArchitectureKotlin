@@ -10,7 +10,6 @@ import dagger.Provides
 class DetailActivityModule {
 
     @Provides
-    @PerActivity
     internal fun providePresenter(detailActivity: DetailActivity): DetailActivityPresenter {
         val flag = detailActivity.intent.getStringExtra(DetailActivity.COUNTRY_IMAGE)
         val name = detailActivity.intent.getStringExtra(DetailActivity.COUNTRY_NAME)

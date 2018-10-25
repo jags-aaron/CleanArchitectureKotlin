@@ -12,4 +12,8 @@ abstract class UseCase(private val executor: Executor) {
         executor.asyncExecute { asyncFun() }
     }
 
+    fun cancelJob(){
+        executor.cancelJob()
+    }
+
 }
