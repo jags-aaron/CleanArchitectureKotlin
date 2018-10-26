@@ -11,8 +11,10 @@ import com.n3k0.amplemindcleanarchitecture.presentation.MainItemPresenter
 class HolderCountryItem(val view: View) : BaseViewHolder<MainItemPresenter, MainActivityViewModel>(view) {
 
     override fun bind(viewViewModel: MainActivityViewModel, itemPresenter: MainItemPresenter, position: Int) {
-        view.findViewById<ConstraintLayout>(R.id.itemContainer).setOnClickListener {
-            viewViewModel.onItemClicked(itemPresenter.country)
+
+        val container = view.findViewById<ConstraintLayout>(R.id.itemContainer)
+        container.setOnClickListener {
+            viewViewModel.publish(MainIntents.ShowDetailIntent(itemPresenter.country))
         }
 
         view.findViewById<TextView>(R.id.tvTitle).text = itemPresenter.getCountryName()

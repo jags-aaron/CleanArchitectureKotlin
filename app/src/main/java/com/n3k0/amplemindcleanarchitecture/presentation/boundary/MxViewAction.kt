@@ -1,0 +1,3 @@
+package com.n3k0.amplemindcleanarchitecture.presentation.boundary
+
+interface MxViewAction

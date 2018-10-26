@@ -1,33 +1,36 @@
 package com.n3k0.amplemindcleanarchitecture.platform.view.main
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.jakewharton.rxbinding2.view.RxView
 import com.n3k0.amplemindcleanarchitecture.R
 import com.n3k0.amplemindcleanarchitecture.data.model.Country
 import com.n3k0.amplemindcleanarchitecture.platform.adapter.Adapter
-import com.n3k0.amplemindcleanarchitecture.platform.adapter.TypeFactoryImpl
 import com.n3k0.amplemindcleanarchitecture.platform.navigation.Navigator
 import com.n3k0.amplemindcleanarchitecture.presentation.MainActivityViewModel
-import com.n3k0.amplemindcleanarchitecture.presentation.boundary.ItemPresenter
-import com.n3k0.amplemindcleanarchitecture.presentation.boundary.MainView
 import dagger.android.AndroidInjection
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_main.*
-import java.lang.Exception
 import javax.inject.Inject
 
 open class MainActivity : AppCompatActivity(), MainView {
 
+    private val disposables = CompositeDisposable()
+
     @Inject
     lateinit var viewModelFactory: ViewModelProvider.Factory
 
-    private val compositeDisposable = CompositeDisposable()
+    @Inject
+    lateinit var render: MainRender
+
     private lateinit var viewModel: MainActivityViewModel
+
     private lateinit var mAdapter: Adapter
     private lateinit var viewManager: RecyclerView.LayoutManager
 
@@ -37,51 +40,61 @@ open class MainActivity : AppCompatActivity(), MainView {
 
         AndroidInjection.inject(this)
 
-        viewModel = ViewModelProviders.of(this, viewModelFactory)
-            .get(MainActivityViewModel::class.java)
+        viewModel = ViewModelProviders.of(this, viewModelFactory).get(MainActivityViewModel::class.java)
 
         viewManager = LinearLayoutManager(this)
-
-        btnGetData.setOnClickListener {
-            viewModel.getMockData()
-        }
     }
-
-    /* --------------------- OBSERVERS --------------------------*/
 
     override fun onStart() {
         super.onStart()
-        compositeDisposable.add(viewModel.errorSubject.subscribe(this::showError))
-        compositeDisposable.add(viewModel.successSubject.subscribe(this::showList))
-        compositeDisposable.add(viewModel.itemClickSubject.subscribe(this::itemListClick))
+
+        disposables.add(viewModel.states()
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { state -> render.layout(this, state) })
+
+        viewModel.processIntents(intents())
     }
 
-    override fun onStop() {
-        compositeDisposable.clear()
-        viewModel.onStop()
-        super.onStop()
-    }
-
-    /* --------------------- RX TRIGGERS --------------------------*/
-
-    override fun showList(itemCountries: List<ItemPresenter>) {
-        mAdapter = Adapter(
-            itemCountries,
-            viewModel,
-            TypeFactoryImpl()
+    private fun intents(): Observable<MainIntents> {
+        return Observable.merge(
+            // default state
+            Observable.just(MainIntents.InitialIntent),
+            // Button click Intent
+            RxView.clicks(btnGetData)
+                .map { MainIntents.GetCountriesIntent(true) }
         )
-        recyclerView.apply {
-            setHasFixedSize(true)
-            layoutManager = viewManager
-            adapter = mAdapter
+    }
+
+    override fun onStateChange(state: MainStates) {
+        with(state){
+            showList(state.success)
+            showError(error)
         }
     }
 
-    override fun itemListClick(country: Country) {
+    fun itemListClick(country: Country) {
         Navigator.navigateToDetail(this, country)
     }
 
-    override fun showError(error: Exception) {
-        Toast.makeText(this, error.message, Toast.LENGTH_SHORT).show()
+    private fun showError(error: Exception) {
+        // TODO
+    }
+
+    private fun showList(countries: List<Country>){
+//        mAdapter = Adapter(
+//            countries,
+//            viewModel,
+//            TypeFactoryImpl()
+//        )
+//        recyclerView.apply {
+//            setHasFixedSize(true)
+//            layoutManager = viewManager
+//            adapter = mAdapter
+//        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        disposables.clear()
     }
 }
