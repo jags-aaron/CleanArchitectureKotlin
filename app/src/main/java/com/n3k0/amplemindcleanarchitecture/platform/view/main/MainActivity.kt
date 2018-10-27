@@ -1,6 +1,7 @@
 package com.n3k0.amplemindcleanarchitecture.platform.view.main
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelProviders
@@ -10,8 +11,10 @@ import com.jakewharton.rxbinding2.view.RxView
 import com.n3k0.amplemindcleanarchitecture.R
 import com.n3k0.amplemindcleanarchitecture.data.model.Country
 import com.n3k0.amplemindcleanarchitecture.platform.adapter.Adapter
+import com.n3k0.amplemindcleanarchitecture.platform.adapter.TypeFactoryImpl
 import com.n3k0.amplemindcleanarchitecture.platform.navigation.Navigator
 import com.n3k0.amplemindcleanarchitecture.presentation.MainActivityViewModel
+import com.n3k0.amplemindcleanarchitecture.presentation.MainItemPresenter
 import dagger.android.AndroidInjection
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -66,8 +69,8 @@ open class MainActivity : AppCompatActivity(), MainView {
     }
 
     override fun onStateChange(state: MainStates) {
-        with(state){
-            showList(state.success)
+        with(state) {
+            showList(state.countryList)
             showError(error)
         }
     }
@@ -76,21 +79,23 @@ open class MainActivity : AppCompatActivity(), MainView {
         Navigator.navigateToDetail(this, country)
     }
 
-    private fun showError(error: Exception) {
-        // TODO
+    private fun showError(error: Exception?) {
+        if (error != null) {
+            Toast.makeText(this, error?.message, Toast.LENGTH_SHORT).show()
+        }
     }
 
-    private fun showList(countries: List<Country>){
-//        mAdapter = Adapter(
-//            countries,
-//            viewModel,
-//            TypeFactoryImpl()
-//        )
-//        recyclerView.apply {
-//            setHasFixedSize(true)
-//            layoutManager = viewManager
-//            adapter = mAdapter
-//        }
+    private fun showList(countries: List<MainItemPresenter>) {
+        mAdapter = Adapter(
+            countries,
+            viewModel,
+            TypeFactoryImpl()
+        )
+        recyclerView.apply {
+            setHasFixedSize(true)
+            layoutManager = viewManager
+            adapter = mAdapter
+        }
     }
 
     override fun onStop() {

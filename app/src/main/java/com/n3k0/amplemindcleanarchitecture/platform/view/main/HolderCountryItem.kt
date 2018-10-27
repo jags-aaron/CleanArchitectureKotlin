@@ -14,7 +14,7 @@ class HolderCountryItem(val view: View) : BaseViewHolder<MainItemPresenter, Main
 
         val container = view.findViewById<ConstraintLayout>(R.id.itemContainer)
         container.setOnClickListener {
-            viewViewModel.publish(MainIntents.ShowDetailIntent(itemPresenter.country))
+            viewViewModel.publishIntent(MainIntents.ShowDetailIntent(itemPresenter.country))
         }
 
         view.findViewById<TextView>(R.id.tvTitle).text = itemPresenter.getCountryName()

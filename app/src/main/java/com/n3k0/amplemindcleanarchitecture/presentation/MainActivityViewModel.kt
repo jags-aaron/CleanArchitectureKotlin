@@ -2,19 +2,20 @@ package com.n3k0.amplemindcleanarchitecture.presentation
 
 import androidx.lifecycle.ViewModel
 import com.n3k0.amplemindcleanarchitecture.data.common.Either
-import com.n3k0.amplemindcleanarchitecture.data.model.Country
 import com.n3k0.amplemindcleanarchitecture.domain.boundary.UseCaseFactory
 import com.n3k0.amplemindcleanarchitecture.platform.view.main.MainActions
 import com.n3k0.amplemindcleanarchitecture.platform.view.main.MainIntents
 import com.n3k0.amplemindcleanarchitecture.platform.view.main.MainStates
 import io.reactivex.Observable
 import io.reactivex.subjects.PublishSubject
-import java.lang.Exception
 import javax.inject.Inject
 
 open class MainActivityViewModel @Inject constructor(
     private val useCaseFactory: UseCaseFactory
 ) : ViewModel() {
+
+
+    /*--------------------- SUBJECTS ----------------------*/
 
     private val intentsSubject: PublishSubject<MainIntents> = PublishSubject.create()
     private val statesObservable = intentsSubject
@@ -36,6 +37,8 @@ open class MainActivityViewModel @Inject constructor(
         .replay(1)
         .autoConnect(0)
 
+    /*--------------------- VIEW INTERACTIONS ----------------------*/
+
     fun processIntents(intents: Observable<MainIntents>) {
         intents.subscribe(intentsSubject)
     }
@@ -45,9 +48,11 @@ open class MainActivityViewModel @Inject constructor(
     /**
      * Add new Intents on runtime
      * */
-    fun publish(intent: MainIntents) {
+    fun publishIntent(intent: MainIntents) {
         intentsSubject.onNext(intent)
     }
+
+    /*------------------------- MVI FLOW -------------------------*/
 
     private fun filterIntents(intents: Observable<MainIntents>): Observable<MainIntents> {
         return Observable.merge(
@@ -60,17 +65,20 @@ open class MainActivityViewModel @Inject constructor(
 
     private fun reducer(previousState: MainStates, renderAction: MainActions): MainStates {
         return when (renderAction) {
-            is MainActions.SuccessAction -> {
-                previousState.copy(progress = false, success = renderAction.countries)
-            }
             is MainActions.InitialAction -> {
-                previousState.copy(progress = true, success = emptyList())
+                previousState.copy(progress = true, countryList = emptyList())
+            }
+            is MainActions.GettingData -> {
+                previousState.copy(progress = true, countryList = emptyList())
+            }
+            is MainActions.ShowDetail -> {
+                previousState.copy(progress = false, countryList = emptyList(), countrySelected = renderAction.country)
             }
             is MainActions.ErrorAction -> {
-                previousState.copy(progress = false, error = renderAction.failure, success = emptyList())
+                previousState.copy(progress = false, countryList = emptyList(), error = renderAction.failure)
             }
-            is MainActions.ShowDetailAction -> {
-                previousState.copy(progress = false, success = emptyList(), country = renderAction.country)
+            is MainActions.SuccessAction -> {
+                previousState.copy(progress = false, countryList = renderAction.countries)
             }
         }
     }
@@ -81,32 +89,36 @@ open class MainActivityViewModel @Inject constructor(
                 Observable.just(MainActions.InitialAction(true))
             }
             is MainIntents.GetCountriesIntent -> {
-                Observable.just(MainActions.SuccessAction(emptyList()))
+                getCountries() // <-- getting data from api
+                Observable.just(MainActions.GettingData)
             }
             is MainIntents.ShowDetailIntent -> {
-                Observable.just(MainActions.ShowDetailAction(intent.country))
+                Observable.just(MainActions.ShowDetail(intent.country))
+            }
+            is MainIntents.ShowErrorIntent -> {
+                Observable.just(MainActions.ErrorAction(intent.failure))
+            }
+            is MainIntents.ShowSuccessIntent -> {
+                Observable.just(MainActions.SuccessAction(intent.countries))
             }
         }
     }
 
-    fun retornarPendejada(){
-        val example: Unit = useCaseFactory.getCountries().execute {
-            "Test"
-        }
+    /*------------------------- USE CASE INTERACTIONS -------------------------*/
 
-        val res: MainActions = runTransformation {
-            "caseA"
-        }
-    }
-
-    fun runTransformation(f: (String) -> String): MainActions {
-        return MainActions.InitialAction(true)
-    }
-
-    private fun changeToItemPresenter(countries: List<Country>, func: (List<MainItemPresenter>) -> List<MainItemPresenter> ) {
-        useCaseFactory.convertCountriesToItemPresenter(countries, useCaseFactory).execute {
-            func(it)
+    fun getCountries() {
+        useCaseFactory.getCountries().execute {
+            when (it) {
+                is Either.Left -> {
+                    publishIntent(MainIntents.ShowErrorIntent(it.value))
+                }
+                is Either.Right -> {
+                    val items: List<MainItemPresenter> = it.value.map {
+                        MainItemPresenter(it, useCaseFactory)
+                    }
+                    publishIntent(MainIntents.ShowSuccessIntent(items))
+                }
+            }
         }
     }
-
 }
